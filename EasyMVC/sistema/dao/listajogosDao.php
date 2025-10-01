@@ -43,5 +43,13 @@ $id_console=$obj->getId_console();
     $stmt->execute([$titulo,$data_lancamento,$diretor,$img,$id_genero,$id_console]);
     header("Location:../view/listaListajogos.php");
 }
+
+function buscaPorId($id){
+    $sql = "SELECT * FROM listajogos WHERE id = ?";
+    $stmt = $this->con->prepare($sql);
+    $stmt->execute([$id]);
+    $dados = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $dados ? $dados : [];
+}
 }
 ?>

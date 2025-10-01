@@ -316,6 +316,14 @@ function alterar(\$id,\$obj){
     \$stmt->execute([{$atributosOkAlt}]);
     header("Location:../view/lista{$nomeClasse}.php");
 }
+
+function buscaPorId(\$id){
+    \$sql = "SELECT * FROM {$nomeTabela} WHERE {$id} = ?";
+    \$stmt = \$this->con->prepare(\$sql);
+    \$stmt->execute([\$id]);
+    \$dados = \$stmt->fetch(PDO::FETCH_ASSOC);
+    return \$dados ? \$dados : [];
+}
 }
 ?>
 EOT;
@@ -323,54 +331,61 @@ EOT;
         }
 
     }//fimDao
-    function classesView() {
-        //formulários
-        foreach ($this->tabelas as $tabela) {
-            $nomeTabela = array_values((array) $tabela)[0];
-            $atributos=$this->buscaAtributos($nomeTabela);
-            $formCampos="";
-            foreach ($atributos as $atributo) {
-                $atributo=$atributo->Field;
-                $formCampos .= "<label for='{$atributo}'>{$atributo}</label>\n";
-                $formCampos .= "<input type='text' name='{$atributo}' value=<?php //(isset(\$_GET['a']) && \$_GET['a'] == 3) ? \$_POST['{$atributo}'] : '' ?>><br>\n";
-            }
 
-            $conteudo = <<<HTML
+   function classesView() {
+    //formulários
+    foreach ($this->tabelas as $tabela) {
+        $nomeTabela = array_values((array) $tabela)[0];
+        $atributos = $this->buscaAtributos($nomeTabela);
 
+        $formCampos = "";
+        foreach ($atributos as $atributo) {
+            $atributo = $atributo->Field;
+            $formCampos .= "<label for='{$atributo}'>{$atributo}</label>\n";
+            $formCampos .= "<input type='text' name='{$atributo}' value=\"<?php echo isset(\$obj['{$atributo}']) ? \$obj['{$atributo}'] : ''; ?>\">\n<br>\n";
+        }
+
+        $conteudo = <<<HTML
 <html>
     <head>
-        <title><?= (isset(\$_GET['a']) && \$_GET['a'] == 3) ? 'Alterar ' : 'Cadastro de' ?> {$nomeTabela}</title>
+        <title><?= (isset(\$_GET['a']) && \$_GET['a'] == 3) ? 'Alterar ' : 'Cadastro de ' ?> {$nomeTabela}</title>
         <link rel="stylesheet" href="../css/estilos.css">
     </head>
     <body>
        <form action="<?= (isset(\$_GET['a']) && \$_GET['a'] == 3) 
-    ? '../control/{$nomeTabela}Control.php?a=3' 
-    : '../control/{$nomeTabela}Control.php?a=1' ?>" method="post">
-        <h1><?= (isset(\$_GET['a']) && \$_GET['a'] == 3) ? 'Alterar ' : 'Cadastro de' ?> {$nomeTabela}</h1>
+            ? '../control/{$nomeTabela}Control.php?a=3' 
+            : '../control/{$nomeTabela}Control.php?a=1' ?>" method="post">
+
+            <h1><?= (isset(\$_GET['a']) && \$_GET['a'] == 3) ? 'Alterar ' : 'Cadastro de ' ?> {$nomeTabela}</h1>
+            <?php 
+            require_once("../dao/{$nomeTabela}Dao.php");
+            \$obj = isset(\$_GET['id']) ? (new {$nomeTabela}Dao())->buscaPorId(\$_GET['id']) : []; 
+            ?>
             {$formCampos}
-             <button type="submit">Enviar</button>
+            <button type="submit">Enviar</button>
         </form>
     </body>
 </html>
 HTML;
-            file_put_contents("sistema/view/{$nomeTabela}.php", $conteudo); // Exemplo salvando como arquivo
+        file_put_contents("sistema/view/{$nomeTabela}.php", $conteudo);
+    }
+
+    //Listas
+    foreach ($this->tabelas as $tabela) {
+        $nomeTabela = array_values((array)$tabela)[0];
+        $nomeTabelaUC = ucfirst($nomeTabela);
+        $atributos = $this->buscaAtributos($nomeTabela);
+
+        $attr = "";
+        $id = "";
+        foreach ($atributos as $atributo) {
+            if ($atributo->Key == "PRI")
+                $id = "{\$dado['{$atributo->Field}']}";
+
+            $attr .= "echo \"<td>{\$dado['{$atributo->Field}']}</td>\";\n";
         }
-        //Listas
-        foreach ($this->tabelas as $tabela) {
-            $nomeTabela = array_values((array)$tabela)[0];
-            $nomeTabelaUC=ucfirst($nomeTabela);
-            $atributos=$this->buscaAtributos($nomeTabela);
-            $attr = "";
-            $id="";
-            foreach($atributos as $atributo){
-                if($atributo->Key=="PRI")
-                    $id="{\$dado['{$atributo->Field}']}";
 
-                $attr.= "echo \"<td>{\$dado['{$atributo->Field}']}</td>\";\n";
-            }
-            $conteudo="";
-            $conteudo = <<<HTML
-
+        $conteudo = <<<HTML
 <html>
     <head>
         <title>Lista de {$nomeTabela}</title>
@@ -379,55 +394,137 @@ HTML;
     <body>
       <?php
       require_once("../dao/{$nomeTabela}Dao.php");
-   \$dao=new {$nomeTabela}DAO();
-   \$dados=\$dao->listaGeral();
-    echo "<table border=1>";
-    foreach(\$dados as \$dado){
-        echo "<tr>";
-       {$attr}
-       echo "<td>".
-       "<a href='../control/{$nomeTabela}Control.php?id={$id}&a=2'> Excluir</a>".
-       "</td>";
-       echo "<td>".
-       "<a href='../view/{$nomeTabela}.php?a=3'> Alterar</a>"."</td>";
-       echo "</tr>";
-    }
-    echo "</table>";
-     ?>  
+      \$dao = new {$nomeTabela}DAO();
+      \$dados = \$dao->listaGeral();
+      echo "<table border=1>";
+      foreach(\$dados as \$dado){
+          echo "<tr>";
+          {$attr}
+          echo "<td>".
+            "<a href='../control/{$nomeTabela}Control.php?id={$id}&a=2'>Excluir</a>".
+          "</td>";
+          echo "<td>".
+            "<a href='../view/{$nomeTabela}.php?a=3&id={$id}'>Alterar</a>".
+          "</td>";
+          echo "</tr>";
+      }
+      echo "</table>";
+      ?>  
     </body>
 </html>
-HTML;           
-  file_put_contents("sistema/view/lista{$nomeTabelaUC}.php", $conteudo);        
+HTML;
 
+        file_put_contents("sistema/view/lista{$nomeTabelaUC}.php", $conteudo);
+    }
 
+    //criar pagina inicial
+    $cadastros = "";
+    $relatorios = "";
 
+    foreach ($this->tabelas as $tabela) {
+        $nomeTabela = array_values((array)$tabela)[0];
+        $nomeTabelaUC = ucfirst($nomeTabela);
 
+        $cadastros .= "<li><a href='{$nomeTabela}.php'>Cadastro {$nomeTabelaUC}</a></li>\n";
+        $relatorios .= "<li><a href='lista{$nomeTabelaUC}.php'>Relatório {$nomeTabelaUC}</a></li>\n";
+    }
 
- $conteudo="";
- $conteudo = <<<HTML
-
-<html>
-    <head>
-        <title>Lista de {$nomeTabela}</title>
-        <link rel="stylesheet" href="../css/estilos.css">
-    </head>
-    <body>
+    $conteudo = <<<HTML
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Crud {$this->banco}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #ecf0f1;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        nav {
+            background-color: #34495e;
+        }
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        nav ul li {
+            position: relative;
+        }
+        nav > ul > li {
+            margin-right: 20px;
+        }
+        nav a {
+            display: block;
+            padding: 15px 20px;
+            color: white;
+            text-decoration: none;
+        }
+        nav a:hover {
+            background-color: #2c3e50;
+        }
+        nav ul ul {
+            display: none;
+            position: absolute;
+            background-color: #34495e;
+            top: 50px;
+            left: 0;
+            min-width: 200px;
+        }
+        nav ul li:hover ul {
+            display: block;
+        }
+        nav ul ul li {
+            width: 100%;
+        }
+        main {
+            padding: 30px;
+        }
+        main h1 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Crud
+    </header>
+    <nav>
         <ul>
             <li>
                 <a href="#">Cadastros</a>
-                <ul></ul>
+                <ul>
+                    {$cadastros}
+                </ul>
             </li>
             <li>
                 <a href="#">Relatórios</a>
-                <ul></ul>
+                <ul>
+                    {$relatorios}
+                </ul>
             </li>
         </ul>
-    </body>
+    </nav>
+    <main>
+        <h1>Bem-vindo!</h1>
+        <p>Esta é a área de conteúdo do sistema.</p>
+    </main>
+</body>
 </html>
-HTML;  
- file_put_contents("sistema/view/index.php", $conteudo);                 
-        }
-    }//fimView
+HTML;
+
+    file_put_contents("sistema/view/index.php", $conteudo);
+}
+
  
 }
 new Creator();

@@ -35,5 +35,13 @@ $descricao=$obj->getDescricao();
     $stmt->execute([$nome_genero,$descricao]);
     header("Location:../view/listaGenero.php");
 }
+
+function buscaPorId($id){
+    $sql = "SELECT * FROM genero WHERE id_genero = ?";
+    $stmt = $this->con->prepare($sql);
+    $stmt->execute([$id]);
+    $dados = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $dados ? $dados : [];
+}
 }
 ?>

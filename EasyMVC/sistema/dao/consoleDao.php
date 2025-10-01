@@ -41,5 +41,13 @@ $preco_lancamento=$obj->getPreco_lancamento();
     $stmt->execute([$nome_console,$fabricante,$ano_lancamento,$geracao,$preco_lancamento]);
     header("Location:../view/listaConsole.php");
 }
+
+function buscaPorId($id){
+    $sql = "SELECT * FROM console WHERE id_console = ?";
+    $stmt = $this->con->prepare($sql);
+    $stmt->execute([$id]);
+    $dados = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $dados ? $dados : [];
+}
 }
 ?>
